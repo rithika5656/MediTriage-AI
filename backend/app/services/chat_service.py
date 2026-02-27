@@ -166,10 +166,11 @@ class ChatService:
             user_id, intent, extracted_data, missing_fields, message
         )
         
-        # Store in chat history
-        chat_record = self._save_chat_history(
-            user_id, session_id, message, response
-        )
+        # Store in chat history (non-critical - don't let DB errors break chat)
+        try:
+            self._save_chat_history(user_id, session_id, message, response)
+        except Exception as e:
+            print(f"[WARNING] Failed to save chat history: {e}")
         
         return response
     
@@ -434,6 +435,12 @@ class ChatService:
         context = self._conversation_contexts.get(user_id, {})
         collected_data = context.get('collected_data', {})
         
+        # Sanitise: convert sets to lists for JSON serialisation
+        safe_data = {
+            k: list(v) if isinstance(v, set) else v
+            for k, v in collected_data.items()
+        }
+        
         triage_data = response.get('triage', {})
         
         chat_record = ChatHistory(
@@ -441,14 +448,18 @@ class ChatService:
             message=message,
             response=response['message'],
             message_type=response.get('action', 'chat'),
-            risk_score=triage_data.get('risk_score', 0),
+            risk_score=int(triage_data.get('risk_score', 0)),
             phase=response.get('phase', 'query'),
-            extracted_data=collected_data,
+            extracted_data=safe_data,
             session_id=session_id
         )
         
-        db.session.add(chat_record)
-        db.session.commit()
+        try:
+            db.session.add(chat_record)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"[WARNING] DB commit failed: {e}")
         
         return chat_record
     

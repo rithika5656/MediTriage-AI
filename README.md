@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MediTriage-AI: Smart Conversational Patient Query & Appointment System
 
 A full-stack healthcare web application that uses conversational AI to triage patients and manage appointments.
@@ -89,3 +90,6 @@ Classification:
 ## License
 
 MIT License - Built for Hackathon
+=======
+# MediTriage-AI
+>>>>>>> 3ada8e2293c0b9ca2eb743cdd65a1700c18f3014
