@@ -47,30 +47,50 @@ class NLPProcessor:
         r'(loss\s+of\s+(?:taste|smell|appetite))',
     ]
     
-    # Known symptoms dictionary with variations
+    # Known symptoms dictionary with variations (expanded for Tanglish mappings)
     KNOWN_SYMPTOMS = {
-        'headache': ['headache', 'head ache', 'head pain', 'head hurts'],
-        'fever': ['fever', 'febrile', 'high temperature', 'feverish'],
-        'cough': ['cough', 'coughing', 'dry cough', 'wet cough'],
-        'cold': ['cold', 'common cold', 'caught cold'],
+        'headache': ['headache', 'head ache', 'head pain', 'head hurts', 'thala vali'],
+        'fever': ['fever', 'febrile', 'high temperature', 'feverish', 'kaichal', 'jwara', 'suda iruku'],
+        'cough': ['cough', 'coughing', 'dry cough', 'wet cough', 'irumal'],
+        'cold': ['cold', 'common cold', 'caught cold', 'kuliru', 'chills', 'chills varudhu'],
         'sore throat': ['sore throat', 'throat pain', 'throat hurts'],
         'runny nose': ['runny nose', 'nasal congestion', 'stuffy nose', 'blocked nose'],
-        'body ache': ['body ache', 'body pain', 'muscle pain', 'aching'],
-        'fatigue': ['fatigue', 'tired', 'exhausted', 'weakness', 'weak'],
+        'body ache': ['body ache', 'body pain', 'muscle pain', 'aching', 'sogam', 'tired ah iruken', 'weak ah iruku'],
+        'fatigue': ['fatigue', 'tired', 'exhausted', 'weakness', 'weak', 'sogam', 'tired ah iruken'],
         'nausea': ['nausea', 'nauseous', 'feel sick', 'queasy'],
-        'vomiting': ['vomiting', 'vomit', 'throwing up', 'puking'],
+        'vomiting': ['vomiting', 'vomit', 'throwing up', 'puking', 'vomiting ah iruku', 'vomit panren'],
         'diarrhea': ['diarrhea', 'loose motion', 'loose stool'],
-        'chest pain': ['chest pain', 'chest hurts', 'chest tightness'],
-        'breathing difficulty': ['breathing difficulty', 'shortness of breath', 
-                                  'difficulty breathing', "can't breathe", 'breathless'],
-        'dizziness': ['dizzy', 'dizziness', 'lightheaded', 'vertigo'],
-        'rash': ['rash', 'skin rash', 'hives', 'skin irritation'],
-        'back pain': ['back pain', 'backache', 'back hurts'],
-        'abdominal pain': ['stomach pain', 'abdominal pain', 'tummy ache', 'belly pain'],
-        'loss of appetite': ['loss of appetite', 'not hungry', "can't eat"],
-        'insomnia': ['insomnia', "can't sleep", 'sleep problems', 'sleepless'],
-        'anxiety': ['anxiety', 'anxious', 'worried', 'panic'],
-        'joint pain': ['joint pain', 'arthritis', 'joints hurt'],
+        'constipation': ['constipation', 'motion problem'],
+        'chest pain': ['chest pain', 'chest hurts', 'chest tightness', 'nenju vali', 'heart vali', 'left side vali', 'sudden nenju vali'],
+        'breathing difficulty': ['breathing difficulty', 'shortness of breath', 'difficulty breathing', "can't breathe", 'breathless', 'suvasa prachanai', 'suvasa kashtam', 'moochu vidra kashtam'],
+        'dizziness': ['dizzy', 'dizziness', 'lightheaded', 'vertigo', 'thalai suthudhu', 'mayakkam', 'sudden mayakkam'],
+        'fainting': ['fainting', 'unarvu illa'],
+        'blackout': ['blackout', 'kangal iruttu'],
+        'high blood pressure': ['high blood pressure', 'high bp'],
+        'low blood pressure': ['low blood pressure', 'low bp'],
+        'diabetes': ['diabetes', 'sugar iruku'],
+        'high blood sugar': ['high blood sugar', 'sugar level high'],
+        'low blood sugar': ['low blood sugar', 'sugar level kammi'],
+        'skin allergy': ['skin allergy', 'itching ah iruku'],
+        'skin rash': ['skin rash', 'rashes', 'sivappu patch', 'red rash'],
+        'joint pain': ['joint pain', 'kai kaal vali', 'muttu vali'],
+        'knee pain': ['knee pain', 'muttu vali'],
+        'back pain': ['back pain', 'backache', 'back hurts', 'back vali'],
+        'hip pain': ['hip pain', 'iduppu vali'],
+        'stress': ['stress', 'stress ah iruku'],
+        'anxiety': ['anxiety', 'anxious', 'worried', 'panic', 'anxiety ah iruku'],
+        'insomnia': ['insomnia', "can't sleep", 'sleep problems', 'sleepless', 'thookam varala'],
+        'depression': ['depression', 'depressed ah feel panren'],
+        'loss of appetite': ['loss of appetite', 'not hungry', "can't eat", 'pasikudhu illa'],
+        'eye pain': ['eye pain', 'kan vali'],
+        'blurred vision': ['blurred vision', 'kan suthudhu'],
+        'wheezing': ['wheezing'],
+        'stomach pain': ['stomach pain', 'abdominal pain', 'tummy ache', 'belly pain', 'vayiru vali'],
+        'acidity': ['acidity', 'vayiru erichal'],
+        'phlegm': ['phlegm', 'mucus'],
+        'very severe': ['very severe', 'romba severe'],
+        'mild': ['mild', 'light ah iruku', 'konjam'],
+        'severe pain': ['severe pain', 'romba kashtam'],
     }
     
     # Temperature extraction patterns
@@ -88,6 +108,7 @@ class NLPProcessor:
         r'(\d+)\s+(day|days|week|weeks|hour|hours|month|months)\s+(?:now|ago)',
         r'started\s+(\d+)\s+(day|days|week|weeks|hour|hours)\s+ago',
         r'been\s+(\d+)\s+(day|days|week|weeks)',
+        r'(moonu naal|rendu naal|naala naal|oru vaaram|just started today|for about a week|for about 2-3 days)',
     ]
     
     # Severity indicators
@@ -210,31 +231,41 @@ class NLPProcessor:
     def extract_duration(self, text: str) -> Optional[int]:
         """
         Extract symptom duration in days.
-        
         Args:
             text: User's message
-        
         Returns:
             Duration in days or None
         """
         text_lower = text.lower()
-        
         for pattern in self.DURATION_PATTERNS:
             match = re.search(pattern, text_lower)
             if match:
-                value = int(match.group(1))
-                unit = match.group(2).lower()
-                
-                # Convert to days
-                if 'hour' in unit:
-                    return max(1, value // 24)
-                elif 'week' in unit:
-                    return value * 7
-                elif 'month' in unit:
-                    return value * 30
-                else:  # days
-                    return value
-        
+                if match.lastindex == 2:
+                    value = int(match.group(1))
+                    unit = match.group(2).lower()
+                    # Convert to days
+                    if 'hour' in unit:
+                        return max(1, value // 24)
+                    elif 'week' in unit:
+                        return value * 7
+                    elif 'month' in unit:
+                        return value * 30
+                    else:  # days
+                        return value
+                elif match.lastindex == 1:
+                    phrase = match.group(1)
+                    if 'moonu naal' in phrase:
+                        return 3
+                    if 'rendu naal' in phrase:
+                        return 2
+                    if 'naala naal' in phrase:
+                        return 4
+                    if 'oru vaaram' in phrase or 'for about a week' in phrase:
+                        return 7
+                    if 'for about 2-3 days' in phrase:
+                        return 3
+                    if 'just started today' in phrase:
+                        return 1
         return None
     
     def extract_severity(self, text: str) -> Optional[int]:

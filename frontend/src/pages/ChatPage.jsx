@@ -4,6 +4,7 @@
  * Features WhatsApp-style chat UI with real-time responses
  */
 import { useState, useEffect, useRef } from 'react'
+import { detectLanguage, translateToEnglish } from '../utils/languageUtils'
 import { useNavigate } from 'react-router-dom'
 import chatService from '../services/chatService'
 import appointmentService from '../services/appointmentService'
@@ -56,20 +57,30 @@ function ChatPage() {
   const sendMessage = async (messageText = input) => {
     if (!messageText.trim() || loading) return
 
+    // Detect language and translate to English if needed
+    let processedText = messageText.trim();
+    try {
+      const lang = await detectLanguage(processedText);
+      if (lang !== 'en') {
+        processedText = await translateToEnglish(processedText, lang);
+      }
+    } catch (err) {
+      console.warn('Language detection/translation failed:', err);
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
-      content: messageText.trim(),
+      content: messageText.trim(), // Show original input in UI
       timestamp: new Date().toISOString()
-    }
+    };
 
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
 
     try {
-      const response = await chatService.sendMessage(messageText)
-      
+      const response = await chatService.sendMessage(processedText);
       const systemMessage = {
         id: Date.now() + 1,
         type: 'system',
@@ -77,28 +88,28 @@ function ChatPage() {
         phase: response.phase,
         triage: response.triage,
         timestamp: new Date().toISOString()
-      }
+      };
 
-      setMessages(prev => [...prev, systemMessage])
-      setPhase(response.phase)
+      setMessages(prev => [...prev, systemMessage]);
+      setPhase(response.phase);
 
       // Update triage data if available
       if (response.triage) {
-        setTriageData(response.triage)
+        setTriageData(response.triage);
       }
 
       // Set hospitals for emergency phase
       if (response.hospitals) {
-        setHospitals(response.hospitals)
+        setHospitals(response.hospitals);
       }
 
       // Set recommended doctors for appointment phase
       if (response.recommended_doctors) {
-        setRecommendedDoctors(response.recommended_doctors)
+        setRecommendedDoctors(response.recommended_doctors);
       }
 
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error('Failed to send message:', error);
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         type: 'system',

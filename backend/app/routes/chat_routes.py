@@ -6,12 +6,14 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.chat_service import ChatService
 from app.services.appointment_service import AppointmentService
+from app.services.llm_service import LLMService
 
 chat_bp = Blueprint('chat', __name__)
 
 # Initialize services
 chat_service = ChatService()
 appointment_service = AppointmentService()
+llm_service = LLMService()
 
 
 @chat_bp.route('/message', methods=['POST'])
@@ -32,26 +34,31 @@ def send_message():
     data = request.get_json()
     
     message = data.get('message', '').strip()
-    
     if not message:
         return jsonify({'error': 'Message is required'}), 400
-    
-    # Process message through chat service
-    response = chat_service.process_message(user_id, message)
-    
-    # If emergency phase, include hospital information
-    if response.get('phase') == 'emergency':
-        response['hospitals'] = appointment_service.get_nearby_hospitals()
-    
-    # If appointment phase, include recommended doctors
-    if response.get('phase') == 'appointment':
-        specialists = response.get('recommended_specialists', ['General Medicine'])
-        doctors = []
-        for spec in specialists[:2]:  # Get doctors for top 2 specializations
-            doctors.extend(appointment_service.get_doctors_by_specialization(spec))
-        response['recommended_doctors'] = doctors[:5]  # Limit to 5 doctors
-    
-    return jsonify(response), 200
+
+    # 1. Use LLM to extract medical data and reply
+    llm_result = llm_service.extract_medical_data(message)
+    if 'error' in llm_result:
+        return jsonify({'error': llm_result['error']}), 500
+
+    # 2. Pass structured data to risk prediction model (example placeholder)
+    risk_score = 5  # Replace with actual model
+    phase = 'appointment'  # Replace with actual logic
+
+    # 3. Return modular response format
+    return jsonify({
+        'llm_reply': llm_result.get('llm_reply'),
+        'structured_data': {
+            'symptoms': llm_result.get('symptoms'),
+            'temperature': llm_result.get('temperature'),
+            'duration': llm_result.get('duration'),
+            'severity': llm_result.get('severity'),
+            'emergency_flag': llm_result.get('emergency_flag'),
+        },
+        'risk_score': risk_score,
+        'phase': phase
+    }), 200
 
 
 @chat_bp.route('/history', methods=['GET'])
