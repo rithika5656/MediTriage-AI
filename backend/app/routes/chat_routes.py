@@ -28,7 +28,7 @@ def send_message():
         - 200: Response with triage assessment if applicable
         - 400: Missing message
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json()
     
     message = data.get('message', '').strip()
@@ -66,7 +66,7 @@ def get_history():
     Returns:
         - 200: List of chat messages
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     limit = request.args.get('limit', 50, type=int)
     
     history = chat_service.get_chat_history(user_id, limit=limit)
@@ -86,7 +86,7 @@ def get_session():
     Returns:
         - 200: Current session data including collected symptoms
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     context = chat_service.get_session_context(user_id)
     
     return jsonify({
@@ -105,7 +105,7 @@ def reset_session():
     Returns:
         - 200: New session created
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     new_session_id = chat_service.reset_session(user_id)
     
     return jsonify({

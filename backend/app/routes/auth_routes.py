@@ -74,7 +74,7 @@ def signup():
     db.session.commit()
     
     # Generate access token
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return jsonify({
         'message': 'User registered successfully',
@@ -108,7 +108,7 @@ def login():
         return jsonify({'error': 'Invalid email or password'}), 401
     
     # Generate access token
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return jsonify({
         'message': 'Login successful',
@@ -128,7 +128,7 @@ def get_profile():
         - 200: User profile data
         - 404: User not found
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     
     if not user:
@@ -154,7 +154,7 @@ def update_profile():
         - 200: Profile updated successfully
         - 404: User not found
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     
     if not user:
@@ -199,7 +199,7 @@ def change_password():
         - 400: Validation error
         - 401: Current password incorrect
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     
     if not user:

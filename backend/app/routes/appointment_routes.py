@@ -25,7 +25,7 @@ def get_appointments():
     Returns:
         - 200: List of appointments
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     status = request.args.get('status')
     upcoming = request.args.get('upcoming', '').lower() == 'true'
     
@@ -58,7 +58,7 @@ def book_appointment():
         - 201: Appointment booked successfully
         - 400: Validation error or slot unavailable
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json()
     
     # Validate required fields
@@ -97,7 +97,7 @@ def book_emergency():
         - 201: Emergency appointment booked
         - 400: No availability or validation error
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json()
     
     if not data.get('symptoms_summary'):
@@ -128,7 +128,7 @@ def get_appointment(appointment_id):
         - 200: Appointment details
         - 404: Appointment not found
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     
     from app.models import Appointment
     appointment = Appointment.query.filter_by(
@@ -155,7 +155,7 @@ def cancel_appointment(appointment_id):
         - 200: Appointment cancelled successfully
         - 400: Cannot cancel or appointment not found
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     
     result = appointment_service.cancel_appointment(
         appointment_id=appointment_id,
@@ -184,7 +184,7 @@ def update_status(appointment_id):
         - 200: Status updated successfully
         - 400: Invalid status or update failed
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     data = request.get_json()
     
     if not data.get('status'):

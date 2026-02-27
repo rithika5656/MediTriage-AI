@@ -1,13 +1,12 @@
 /**
- * Doctors Page Component
- * Browse doctors, view availability, and book appointments
+ * Doctors Page – Professional Navy Blue Theme
  */
 import { useState, useEffect } from 'react'
 import doctorService from '../services/doctorService'
 import appointmentService from '../services/appointmentService'
-import { 
+import {
   Search, Star, Calendar, Clock, User, X,
-  ChevronDown, Loader2, CheckCircle, AlertCircle
+  ChevronDown, Loader2, CheckCircle, AlertCircle, Stethoscope
 } from 'lucide-react'
 
 function DoctorsPage() {
@@ -16,8 +15,7 @@ function DoctorsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSpec, setSelectedSpec] = useState('')
-  
-  // Booking modal state
+
   const [selectedDoctor, setSelectedDoctor] = useState(null)
   const [slots, setSlots] = useState([])
   const [selectedSlot, setSelectedSlot] = useState(null)
@@ -55,11 +53,7 @@ function DoctorsPage() {
   }
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadDoctors()
-      return
-    }
-    
+    if (!searchQuery.trim()) { loadDoctors(); return }
     try {
       setLoading(true)
       const response = await doctorService.searchDoctors(searchQuery)
@@ -76,12 +70,10 @@ function DoctorsPage() {
     setSelectedSlot(null)
     setBookingResult(null)
     setSlotsLoading(true)
-    
     try {
       const response = await doctorService.getSlots(doctor.id)
       setSlots(response.available_slots)
     } catch (error) {
-      console.error('Failed to load slots:', error)
       setSlots([])
     } finally {
       setSlotsLoading(false)
@@ -98,7 +90,6 @@ function DoctorsPage() {
 
   const handleBooking = async () => {
     if (!selectedSlot) return
-    
     setBooking(true)
     try {
       const result = await appointmentService.bookAppointment({
@@ -106,104 +97,131 @@ function DoctorsPage() {
         time_slot: selectedSlot.datetime,
         symptoms_summary: symptoms || undefined
       })
-      
       setBookingResult({ success: true, message: result.message })
-      
-      // Refresh slots after booking
       const response = await doctorService.getSlots(selectedDoctor.id)
       setSlots(response.available_slots)
       setSelectedSlot(null)
     } catch (error) {
-      setBookingResult({ 
-        success: false, 
-        message: error.response?.data?.error || 'Booking failed. Please try again.' 
+      setBookingResult({
+        success: false,
+        message: error.response?.data?.error || 'Booking failed. Please try again.'
       })
     } finally {
       setBooking(false)
     }
   }
 
-  const filteredDoctors = doctors
+  const getSpecColor = (spec) => {
+    const colors = [
+      '#1b3a6b', '#0f7490', '#065f46', '#7c3aed', '#b45309',
+      '#9f1239', '#1e40af', '#166534', '#92400e', '#6b21a8'
+    ]
+    let hash = 0
+    for (let c of (spec || '')) hash = c.charCodeAt(0) + ((hash << 5) - hash)
+    return colors[Math.abs(hash) % colors.length]
+  }
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Find a Doctor</h1>
-        <p className="text-gray-600 mt-1">Browse our specialists and book an appointment</p>
+    <div className="p-4 md:p-8" style={{ minHeight: '100vh', background: 'var(--surface-2)' }}>
+
+      {/* ── Page Header ── */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #0f213e, #1b3a6b)' }}>
+            <Stethoscope className="h-5 w-5 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Find a Doctor</h1>
+        </div>
+        <p className="text-sm ml-13 pl-13" style={{ color: 'var(--text-secondary)', paddingLeft: '52px' }}>
+          Browse our specialists and book an appointment
+        </p>
       </div>
 
-      {/* Search and Filter */}
-      <div className="mb-6 flex flex-col md:flex-row gap-4">
-        {/* Search */}
+      {/* ── Search & Filter ── */}
+      <div className="flex flex-col md:flex-row gap-3 mb-8">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Search by name or specialization..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Search by name or specialization…"
+            className="input pl-10"
           />
         </div>
-        
-        {/* Specialization Filter */}
         <div className="relative">
           <select
             value={selectedSpec}
             onChange={(e) => setSelectedSpec(e.target.value)}
-            className="appearance-none bg-white border border-gray-300 rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[200px]"
+            className="input appearance-none pr-9 min-w-[220px]"
+            style={{ cursor: 'pointer' }}
           >
             <option value="">All Specializations</option>
             {specializations.map((spec) => (
               <option key={spec} value={spec}>{spec}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
+            style={{ color: 'var(--text-muted)' }} />
         </div>
       </div>
 
-      {/* Doctors Grid */}
+      {/* ── Doctors Grid ── */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 text-primary-600 animate-spin" />
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: '#1b3a6b' }} />
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Loading doctors…</p>
+          </div>
         </div>
-      ) : filteredDoctors.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-          <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-800">No doctors found</h3>
-          <p className="text-gray-500 mt-1">Try adjusting your search or filters</p>
+      ) : doctors.length === 0 ? (
+        <div className="card text-center py-16">
+          <User className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--text-muted)' }} />
+          <h3 className="font-semibold text-lg" style={{ color: 'var(--text-primary)' }}>No doctors found</h3>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Try adjusting your search or filters</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDoctors.map((doctor) => (
-            <div
-              key={doctor.id}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6"
-            >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {doctors.map((doctor) => (
+            <div key={doctor.id} className="doctor-card group">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  <User className="h-7 w-7 text-primary-600" />
+                {/* Avatar */}
+                <div className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-white font-bold text-lg"
+                  style={{ background: `linear-gradient(135deg, ${getSpecColor(doctor.specialization)}, #4e8cff33)` }}>
+                  {doctor.name?.split(' ').map(n => n[0]).slice(0, 2).join('')}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-800 truncate">{doctor.name}</h3>
-                  <p className="text-sm text-primary-600 font-medium">{doctor.specialization}</p>
-                  <p className="text-xs text-gray-500 mt-1">{doctor.qualification}</p>
+                  <h3 className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{doctor.name}</h3>
+                  <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                    style={{
+                      background: `${getSpecColor(doctor.specialization)}18`,
+                      color: getSpecColor(doctor.specialization)
+                    }}>
+                    {doctor.specialization}
+                  </span>
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>{doctor.qualification}</p>
                 </div>
               </div>
-              
+
               <div className="mt-4 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-1 text-yellow-600">
-                  <Star className="h-4 w-4 fill-current" />
-                  <span className="font-medium">{doctor.rating}</span>
+                <div className="flex items-center gap-1.5">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{doctor.rating}</span>
                 </div>
-                <span className="text-gray-500">{doctor.experience_years} years exp.</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs px-2.5 py-1 rounded-full"
+                    style={{ background: '#e8edf5', color: 'var(--text-secondary)' }}>
+                    {doctor.experience_years} yrs exp.
+                  </span>
+                </div>
               </div>
-              
+
               <button
+                id={`book-doctor-${doctor.id}`}
                 onClick={() => openBookingModal(doctor)}
-                className="mt-4 w-full btn-primary flex items-center justify-center gap-2"
+                className="btn-primary w-full mt-5 py-2.5"
               >
                 <Calendar className="h-4 w-4" />
                 Book Appointment
@@ -213,84 +231,78 @@ function DoctorsPage() {
         </div>
       )}
 
-      {/* Booking Modal */}
+      {/* ── Booking Modal ── */}
       {selectedDoctor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        <div className="modal-backdrop animate-scale-in">
+          <div className="modal-card animate-scale-in">
+
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <div className="modal-header">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Book Appointment</h2>
-                <p className="text-sm text-gray-500 mt-1">{selectedDoctor.name}</p>
+                <h2 className="text-lg font-bold text-white">Book Appointment</h2>
+                <p className="text-sm mt-0.5" style={{ color: 'rgba(180,205,240,0.8)' }}>{selectedDoctor.name}</p>
               </div>
               <button
                 onClick={closeBookingModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-xl transition-colors hover:bg-white/10"
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-white" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
-              {/* Booking Result */}
+            <div className="p-6 overflow-y-auto scrollbar-thin" style={{ maxHeight: '55vh' }}>
+
               {bookingResult && (
-                <div className={`mb-4 p-4 rounded-lg flex items-start gap-3 ${
-                  bookingResult.success ? 'bg-green-50' : 'bg-red-50'
-                }`}>
-                  {bookingResult.success ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  )}
-                  <p className={`text-sm ${bookingResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                    {bookingResult.message}
-                  </p>
+                <div className={`mb-5 p-4 rounded-xl flex items-start gap-3 ${bookingResult.success ? 'alert-success' : 'alert-error'
+                  }`}>
+                  {bookingResult.success
+                    ? <CheckCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    : <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  }
+                  <p className="text-sm">{bookingResult.message}</p>
                 </div>
               )}
 
-              {/* Symptoms Input */}
+              {/* Symptoms */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Describe your symptoms (optional)
+                <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Describe your symptoms <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span>
                 </label>
                 <textarea
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
-                  placeholder="Brief description of your health concern..."
+                  placeholder="Brief description of your health concern…"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="input resize-none"
                 />
               </div>
 
-              {/* Available Slots */}
+              {/* Slots */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Select a time slot</h3>
-                
+                <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>
+                  Select a time slot
+                </h3>
                 {slotsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 text-primary-600 animate-spin" />
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#1b3a6b' }} />
                   </div>
                 ) : slots.length === 0 ? (
-                  <p className="text-center py-8 text-gray-500">No available slots</p>
+                  <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>No available slots</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {slots.map((slot, index) => (
                       <button
                         key={index}
                         onClick={() => setSelectedSlot(slot)}
-                        className={`p-3 rounded-lg border text-left transition-colors ${
-                          selectedSlot?.datetime === slot.datetime
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-gray-200 hover:border-primary-300'
-                        }`}
+                        className={`slot-btn ${selectedSlot?.datetime === slot.datetime ? 'selected' : ''}`}
                       >
-                        <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
-                          <Calendar className="h-4 w-4 text-gray-400" />
+                        <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          <Calendar className="h-3.5 w-3.5" style={{ color: '#1b3a6b' }} />
                           {slot.day}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">{slot.date}</div>
-                        <div className="flex items-center gap-1 text-sm text-primary-600 mt-1">
+                        <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{slot.date}</div>
+                        <div className="flex items-center gap-1 text-xs mt-1 font-medium" style={{ color: '#1b3a6b' }}>
                           <Clock className="h-3 w-3" />
                           {slot.time}
                         </div>
@@ -302,28 +314,17 @@ function DoctorsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 border-t border-gray-200 flex gap-3">
-              <button
-                onClick={closeBookingModal}
-                className="flex-1 btn-secondary"
-              >
-                Cancel
-              </button>
+            <div className="modal-footer">
+              <button onClick={closeBookingModal} className="btn-secondary flex-1">Cancel</button>
               <button
                 onClick={handleBooking}
                 disabled={!selectedSlot || booking}
-                className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary flex-1"
               >
                 {booking ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Booking...
-                  </>
+                  <><Loader2 className="h-4 w-4 animate-spin" />Booking…</>
                 ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    Confirm Booking
-                  </>
+                  <><CheckCircle className="h-4 w-4" />Confirm Booking</>
                 )}
               </button>
             </div>
