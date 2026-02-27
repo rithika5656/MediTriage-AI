@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Smart healthcare triage and appointment system" />
+    <title>MediTriage AI - Smart Patient Care</title>
+    <style>
+      /* Fallback styles in case Tailwind fails */
+      body { margin: 0; font-family: sans-serif; background: #f9fafb; }
+      #root:empty::after { 
+        content: 'Loading...'; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh;
+        font-size: 1.5rem;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
