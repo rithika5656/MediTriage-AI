@@ -54,7 +54,7 @@ function SignupPage() {
       age: parseInt(formData.age), gender: formData.gender, phone: formData.phone
     })
     setLoading(false)
-    if (result.success) navigate('/chat')
+    if (result.success) navigate('/dashboard')
   }
 
   const displayError = localError || error

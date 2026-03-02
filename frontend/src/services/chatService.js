@@ -1,54 +1,31 @@
 /**
  * Chat Service
- * Handles all chat-related API calls
+ * ============
+ * Handles all chat-related API calls to the MediTriage Django backend.
+ * Endpoint: POST /api/chat/
  */
 import api from './api'
 
 const chatService = {
   /**
-   * Send a message and get response
-   * @param {string} message - User's message
-   * @returns {Promise} Response with triage assessment
+   * Send a symptom message and receive a structured triage assessment.
+   *
+   * @param {string} message   – User's symptom text (any language)
+   * @param {Array}  history   – Previous conversation turns for multi-turn context
+   *                             Format: [{ role: 'user'|'assistant', content: '...' }]
+   * @returns {Promise<Object>} Triage response:
+   *   {
+   *     triage_score, health_stability_score, risk_level,
+   *     medical_advice, detected_symptoms, recommended_action
+   *   }
    */
-  sendMessage: async (message) => {
-    const response = await api.post('/chat/message', { message })
+  sendMessage: async (message, history = []) => {
+    const response = await api.post('/chat/', { message, history })
     return response.data
   },
 
-  /**
-   * Get chat history for current user
-   * @param {number} limit - Maximum messages to retrieve
-   * @returns {Promise} Chat history array
-   */
-  getHistory: async (limit = 50) => {
-    const response = await api.get('/chat/history', { params: { limit } })
-    return response.data
-  },
-
-  /**
-   * Get current session context
-   * @returns {Promise} Session data
-   */
-  getSession: async () => {
-    const response = await api.get('/chat/session')
-    return response.data
-  },
-
-  /**
-   * Reset conversation session
-   * @returns {Promise} New session info
-   */
-  resetSession: async () => {
-    const response = await api.post('/chat/session/reset')
-    return response.data
-  },
-
-  /**
-   * Get quick response options
-   * @returns {Promise} Quick response categories
-   */
-  getQuickResponses: async () => {
-    const response = await api.get('/chat/quick-responses')
+  analyzeFace: async (base64Image) => {
+    const response = await api.post('/analyze-face/', { image: base64Image })
     return response.data
   }
 }

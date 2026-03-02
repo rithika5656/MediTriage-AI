@@ -6,59 +6,94 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.chat_service import ChatService
 from app.services.appointment_service import AppointmentService
-from app.services.llm_service import LLMService
+from app.services.llama_service import extract_medical_data
 
 chat_bp = Blueprint('chat', __name__)
 
-# Initialize services
+
+import os
 chat_service = ChatService()
 appointment_service = AppointmentService()
-llm_service = LLMService()
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'llama')
 
 
 @chat_bp.route('/message', methods=['POST'])
 @jwt_required()
 def send_message():
     """
-    Process a chat message from the user.
-    Extracts symptoms, performs NLP analysis, and returns appropriate response.
-    
-    Request Body:
-        - message: User's message text (required)
-    
-    Returns:
-        - 200: Response with triage assessment if applicable
-        - 400: Missing message
+    Chat endpoint for medical triage using OpenAI.
+    Accepts multilingual user input, extracts structured medical data, and replies in same language.
+    Returns formatted response for frontend.
     """
-    user_id = int(get_jwt_identity())
+    user_id = get_jwt_identity()
     data = request.get_json()
-    
-    message = data.get('message', '').strip()
-    if not message:
+    user_input = data.get('message', '').strip()
+    if not user_input:
         return jsonify({'error': 'Message is required'}), 400
 
-    # 1. Use LLM to extract medical data and reply
-    llm_result = llm_service.extract_medical_data(message)
-    if 'error' in llm_result:
-        return jsonify({'error': llm_result['error']}), 500
+    try:
+        if LLM_PROVIDER in ['openai', 'groq', 'llama']:
+            # Fetch recent history for context
+            history = chat_service.get_chat_history(user_id, limit=5)
+            # Standardize history for LLM (role, content)
+            chat_history_list = []
+            for h in history:
+                chat_history_list.append({'role': 'user', 'content': h.get('message', '')})
+                chat_history_list.append({'role': 'assistant', 'content': h.get('response', '')})
 
-    # 2. Pass structured data to risk prediction model (example placeholder)
-    risk_score = 5  # Replace with actual model
-    phase = 'appointment'  # Replace with actual logic
+            result = extract_medical_data(user_input, chat_history_list)
+            
+            phase = 'collecting'
+            severity = result.get('severity')
+            if severity is None:
+                try:
+                    severity = int(severity) if severity else 0
+                except (ValueError, TypeError):
+                    severity = 0
+            elif isinstance(severity, str) and severity.isdigit():
+                severity = int(severity)
+            
+            if result.get('emergency_flag'):
+                phase = 'emergency'
+            elif severity and severity > 3:
+                phase = 'appointment'
+            elif result.get('symptoms'):
+                phase = 'query'
 
-    # 3. Return modular response format
-    return jsonify({
-        'llm_reply': llm_result.get('llm_reply'),
-        'structured_data': {
-            'symptoms': llm_result.get('symptoms'),
-            'temperature': llm_result.get('temperature'),
-            'duration': llm_result.get('duration'),
-            'severity': llm_result.get('severity'),
-            'emergency_flag': llm_result.get('emergency_flag'),
-        },
-        'risk_score': risk_score,
-        'phase': phase
-    }), 200
+            response = {
+                'message': result.get('reply_message', 'Could you provide more details about how you are feeling?'),
+                'phase': phase,
+                'triage': {
+                    'risk_score': severity or 0,
+                    'detected_symptoms': result.get('symptoms', [])
+                }
+            }
+        else:
+            response = chat_service.process_message(user_id, user_input)
+            phase = response.get('phase', 'collecting')
+
+        if phase == 'appointment':
+            doctors = []
+            # Get some default specialists if none determined
+            specialists = ['General Physician', 'Neurologist', 'Cardiologist']
+            for spec in specialists[:2]:
+                docs = appointment_service.get_doctors_by_specialization(spec)
+                docs = [d.to_dict() if hasattr(d, 'to_dict') else d for d in docs]
+                doctors.extend(docs)
+            response['recommended_doctors'] = doctors[:5]
+            
+        elif phase == 'emergency':
+            response['hospitals'] = [
+                {'name': 'City General Hospital', 'distance': '2.5 km', 'wait_time': '5 mins', 'phone': '911'},
+                {'name': 'St. Mary Emergency Center', 'distance': '3.2 km', 'wait_time': '12 mins', 'phone': '911'}
+            ]
+
+        return jsonify(response), 200
+    except Exception as e:
+        return jsonify({
+            'error': 'Failed to process medical triage',
+            'details': str(e)
+        }), 500
 
 
 @chat_bp.route('/history', methods=['GET'])

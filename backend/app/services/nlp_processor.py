@@ -50,7 +50,7 @@ class NLPProcessor:
     # Known symptoms dictionary with variations (expanded for Tanglish mappings)
     KNOWN_SYMPTOMS = {
         'headache': ['headache', 'head ache', 'head pain', 'head hurts', 'thala vali'],
-        'fever': ['fever', 'febrile', 'high temperature', 'feverish', 'kaichal', 'jwara', 'suda iruku'],
+        'fever': ['fever', 'febrile', 'high temperature', 'feverish', 'kaichal', 'kachal', 'jwara', 'suda iruku'],
         'cough': ['cough', 'coughing', 'dry cough', 'wet cough', 'irumal'],
         'cold': ['cold', 'common cold', 'caught cold', 'kuliru', 'chills', 'chills varudhu'],
         'sore throat': ['sore throat', 'throat pain', 'throat hurts'],
