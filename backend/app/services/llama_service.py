@@ -19,7 +19,7 @@ client = OpenAI(
     api_key=GROQ_API_KEY,
     base_url="https://api.groq.com/openai/v1"
 )
-MODEL = "llama-3.3-70b-specdec"
+MODEL = "llama-3.3-70b-versatile"
 
 def build_prompt(user_input, history=""):
     return f"""
