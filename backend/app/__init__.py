@@ -39,7 +39,11 @@ def create_app(config_name='default'):
     # Enable CORS for frontend communication
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:5173", "http://localhost:3000"],
+            "origins": [
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "https://medi-triage-ai-three.vercel.app"
+            ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }

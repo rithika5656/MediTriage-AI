@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { API_URL } from '../services/api'
 import { 
   Activity, Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, ScanFace,
   Siren, Phone, MapPin, AlertTriangle, CheckCircle, Loader2, X
@@ -115,7 +116,7 @@ function LoginPage() {
     setEmergencyError('')
     
     try {
-      const response = await fetch('/api/emergency-direct-request/', {
+      const response = await fetch(`${API_URL}/emergency-direct-request/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
