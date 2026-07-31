@@ -1,11 +1,19 @@
 import os
 import requests
-
 import json
 import re
 from openai import OpenAI
+from dotenv import load_dotenv
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+load_dotenv()
+
+client = None
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+if openai_api_key:
+    try:
+        client = OpenAI(api_key=openai_api_key)
+    except Exception as exc:
+        print(f"OpenAI client initialization failed: {exc}")
 
 def build_prompt(user_input):
     return f"""
@@ -80,8 +88,10 @@ def extract_json(text):
 def extract_medical_data(user_input):
     prompt = build_prompt(user_input)
     try:
-        provider = os.getenv('LLM_PROVIDER', 'openai')
+        provider = os.getenv('LLM_PROVIDER', 'openai').lower()
         if provider == 'openai':
+            if client is None:
+                raise RuntimeError("No OpenAI credentials were configured.")
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],

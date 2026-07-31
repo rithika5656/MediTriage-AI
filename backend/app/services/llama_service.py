@@ -11,15 +11,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use Groq as the Llama provider
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq')
-
-client = OpenAI(
-    api_key=GROQ_API_KEY,
-    base_url="https://api.groq.com/openai/v1"
-)
+# Use Groq or OpenAI as the Llama provider
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'groq').lower()
 MODEL = "llama-3.3-70b-versatile"
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+
+client = None
+if LLM_PROVIDER == 'openai' and OPENAI_API_KEY:
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+    except Exception as exc:
+        print(f"OpenAI client initialization failed: {exc}")
+elif GROQ_API_KEY:
+    try:
+        client = OpenAI(
+            api_key=GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1"
+        )
+    except Exception as exc:
+        print(f"Groq client initialization failed: {exc}")
 
 def build_prompt(user_input, history=""):
     return f"""
@@ -128,8 +140,12 @@ def extract_medical_data(user_input, chat_history_list=None):
 
     prompt = build_prompt(user_input, history_str)
     try:
+        if client is None:
+            raise RuntimeError("No LLM credentials were configured. Set GROQ_API_KEY or OPENAI_API_KEY to enable live AI responses.")
+
+        model_name = DEFAULT_OPENAI_MODEL if LLM_PROVIDER == 'openai' else MODEL
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2
         )
