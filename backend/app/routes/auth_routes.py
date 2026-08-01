@@ -14,6 +14,48 @@ from app.models import User
 auth_bp = Blueprint('auth', __name__)
 
 
+@auth_bp.route('/register-face/', methods=['POST'])
+@jwt_required()
+def register_face():
+    """Compatibility endpoint for face registration requests from the frontend."""
+    data = request.get_json(silent=True) or {}
+    face_samples = data.get('face_samples', [])
+    return jsonify({
+        'success': True,
+        'message': 'Face registration is not configured for this deployment.',
+        'samples_processed': len(face_samples)
+    }), 200
+
+
+@auth_bp.route('/verify-face/', methods=['POST'])
+def verify_face():
+    """Compatibility endpoint for face verification requests from the frontend."""
+    return jsonify({
+        'match': False,
+        'confidence': 0,
+        'message': 'Face verification is not configured for this deployment.'
+    }), 200
+
+
+@auth_bp.route('/check-face-registration/', methods=['GET'])
+@jwt_required()
+def check_face_registration():
+    """Compatibility endpoint for checking whether a face is registered."""
+    return jsonify({'has_face_registered': False}), 200
+
+
+@auth_bp.route('/delete-face/', methods=['DELETE'])
+@jwt_required()
+def delete_face():
+    """Compatibility endpoint for deleting a face registration."""
+    return jsonify({'success': True, 'message': 'No face registration found to delete.'}), 200
+
+
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    return signup()
+
+
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
     """

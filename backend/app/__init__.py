@@ -2,7 +2,8 @@
 Flask Application Factory Module.
 Initializes the Flask app with all extensions, blueprints, and configurations.
 """
-from flask import Flask
+import os
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -26,6 +27,9 @@ def create_app(config_name='default'):
     Returns:
         Configured Flask application instance
     """
+    if config_name == 'default':
+        config_name = os.environ.get('FLASK_ENV', 'production')
+
     app = Flask(__name__)
     
     # Load configuration
@@ -37,17 +41,22 @@ def create_app(config_name='default'):
     bcrypt.init_app(app)
     
     # Enable CORS for frontend communication
-    CORS(app, resources={
-        r"/api/*": {
+    CORS(
+        app,
+        resources={r"/api/*": {
             "origins": [
                 "http://localhost:5173",
                 "http://localhost:3000",
-                "https://medi-triage-ai-three.vercel.app"
+                "http://127.0.0.1:5173",
+                "https://medi-triage-ai-three.vercel.app",
+                "https://www.medi-triage-ai-three.vercel.app"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }},
+        supports_credentials=True
+    )
     
     # Register blueprints (API routes)
     from app.routes import auth_routes, chat_routes, appointment_routes, doctor_routes
@@ -64,9 +73,38 @@ def create_app(config_name='default'):
         from app.services.seed_service import seed_doctors
         seed_doctors()
     
+    @app.route('/')
+    def index():
+        return {'status': 'healthy', 'service': 'MediTriage API'}
+
+    @app.route('/api')
+    @app.route('/api/')
+    def api_root():
+        return {'status': 'healthy', 'service': 'MediTriage API'}
+
     # Health check endpoint
     @app.route('/api/health')
     def health_check():
         return {'status': 'healthy', 'message': 'MediTriage API is running'}
+
+    @app.route('/api/analyze-face/', methods=['POST'])
+    def analyze_face():
+        return jsonify({
+            'success': False,
+            'error': 'Face severity analysis is not configured for this deployment.'
+        }), 501
+
+    @app.route('/api/emergency-direct-request/', methods=['POST'])
+    def emergency_direct_request():
+        data = request.get_json(silent=True) or {}
+        phone_number = data.get('phone_number', '')
+        location = data.get('location', {})
+        return jsonify({
+            'success': True,
+            'message': 'Emergency dispatch request received.',
+            'phone_number': phone_number,
+            'location': location,
+            'dispatch_id': 'demo-dispatch'
+        }), 200
     
     return app

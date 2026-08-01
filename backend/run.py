@@ -5,8 +5,8 @@ Runs the Flask development server.
 import os
 from app import create_app
 
-# Get environment (default to development)
-env = os.environ.get('FLASK_ENV', 'development')
+# Get environment (default to production for Render/Vercel deployments)
+env = os.environ.get('FLASK_ENV', 'production')
 
 # Create the application
 app = create_app(env)

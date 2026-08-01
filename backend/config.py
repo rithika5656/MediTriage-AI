@@ -42,10 +42,10 @@ class ProductionConfig(Config):
     """Production environment configuration."""
     
     DEBUG = False
-    # PostgreSQL for production
+    # Use Render-provided DATABASE_URL when available; otherwise fall back to SQLite.
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         'DATABASE_URL',
-        'postgresql://user:password@localhost/meditriage'
+        'sqlite:///instance/meditriage.db'
     )
 
 
