@@ -9,6 +9,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from config import config
+from database import UPLOAD_DIR, ensure_storage_paths
 
 # Initialize extensions (without app binding)
 db = SQLAlchemy()
@@ -34,6 +35,9 @@ def create_app(config_name='default'):
     
     # Load configuration
     app.config.from_object(config[config_name])
+    app.config.setdefault('MAX_CONTENT_LENGTH', 25 * 1024 * 1024)
+    app.config.setdefault('UPLOAD_FOLDER', str(UPLOAD_DIR))
+    ensure_storage_paths()
     
     # Initialize extensions with app
     db.init_app(app)
@@ -59,8 +63,9 @@ def create_app(config_name='default'):
     )
     
     # Register blueprints (API routes)
-    from app.routes import auth_routes, chat_routes, appointment_routes, doctor_routes
+    from app.routes import agent_routes, auth_routes, chat_routes, appointment_routes, doctor_routes
     
+    app.register_blueprint(agent_routes.agent_bp, url_prefix='/api')
     app.register_blueprint(auth_routes.auth_bp, url_prefix='/api/auth')
     app.register_blueprint(chat_routes.chat_bp, url_prefix='/api/chat')
     app.register_blueprint(appointment_routes.appointment_bp, url_prefix='/api/appointments')
@@ -72,7 +77,7 @@ def create_app(config_name='default'):
         # Seed initial doctor data
         from app.services.seed_service import seed_doctors
         seed_doctors()
-    
+
     @app.route('/')
     def index():
         return {'status': 'healthy', 'service': 'MediTriage API'}

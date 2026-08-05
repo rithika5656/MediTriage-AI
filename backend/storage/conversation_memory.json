@@ -1,0 +1,108 @@
+{
+  "4": [
+    {
+      "user_id": 4,
+      "message": "I have chest pain, fever, and take aspirin regularly. Can you advise?",
+      "response": "Triage result: Emergency. Cardiopulmonary warning signs were detected. No uploaded document matched this query, so the response is based on general medical knowledge and should not replace a clinician's assessment. No obvious medication conflicts were detected. Suggestion: consult a Cardiologist (Cardiology). This response is based on general medical knowledge.",
+      "symptoms": [
+        "chest pain",
+        "fever"
+      ],
+      "recommendations": [
+        "Seek urgent care immediately.",
+        "See a Cardiologist in Cardiology."
+      ],
+      "priority": "Emergency",
+      "metadata": {
+        "trace": [
+          {
+            "step": "input_received",
+            "status": "completed",
+            "details": {
+              "user_id": 4,
+              "message": "I have chest pain, fever, and take aspirin regularly. Can you advise?",
+              "timestamp": "2026-08-05T04:02:30.559822Z"
+            }
+          },
+          {
+            "step": "intent_detection",
+            "status": "completed",
+            "intent": "triage"
+          },
+          {
+            "step": "context_retrieval",
+            "status": "completed",
+            "history_count": 0,
+            "recent_symptoms": []
+          },
+          {
+            "step": "triage_agent",
+            "status": "completed",
+            "priority": "Emergency",
+            "risk_score": 10
+          },
+          {
+            "step": "research_agent",
+            "status": "completed",
+            "used_rag": false,
+            "citation_count": 0
+          },
+          {
+            "step": "drug_safety_agent",
+            "status": "completed",
+            "warnings": []
+          },
+          {
+            "step": "appointment_agent",
+            "status": "completed",
+            "specialist": "Cardiologist",
+            "department": "Cardiology"
+          },
+          {
+            "step": "report_agent",
+            "status": "completed",
+            "report_fields": [
+              "symptoms",
+              "triage_priority",
+              "medical_findings",
+              "suggested_specialist",
+              "drug_warnings",
+              "recommendations",
+              "timestamp"
+            ]
+          }
+        ],
+        "medical_research": {
+          "used_rag": false,
+          "answer": "No uploaded document matched this query, so the response is based on general medical knowledge and should not replace a clinician's assessment.",
+          "citations": [],
+          "retrieved_context": []
+        },
+        "drug_safety": {
+          "safe": true,
+          "warnings": [],
+          "recommendation": "No obvious medication conflicts were detected.",
+          "structured": {
+            "medications_reviewed": [
+              "aspirin"
+            ],
+            "allergies_reviewed": [],
+            "warning_count": 0
+          }
+        },
+        "appointment": {
+          "specialist": "Cardiologist",
+          "department": "Cardiology",
+          "suggested_datetime": "2026-08-05T04:02:30Z",
+          "hospital_preparation_checklist": [
+            "Bring government ID and insurance information.",
+            "Carry a list of current medicines and allergies.",
+            "Bring previous reports or discharge summaries.",
+            "Arrive 15 minutes early for registration."
+          ]
+        }
+      },
+      "timestamp": "2026-08-05T04:02:30.559822"
+    }
+  ]
+}

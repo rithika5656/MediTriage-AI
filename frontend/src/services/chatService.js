@@ -24,6 +24,30 @@ const chatService = {
     return response.data
   },
 
+  uploadDocument: async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
+  generateReport: async (message = '') => {
+    const response = await api.post('/generate-report', { message })
+    return response.data
+  },
+
+  getHistory: async (limit = 25) => {
+    const response = await api.get('/history', { params: { limit } })
+    return response.data
+  },
+
+  getAgentStatus: async () => {
+    const response = await api.get('/agents/status')
+    return response.data
+  },
+
   analyzeFace: async (base64Image) => {
     const response = await api.post('/analyze-face/', { image: base64Image })
     return response.data

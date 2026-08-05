@@ -16,7 +16,7 @@ import {
   Send, Bot, User as UserIcon, Loader2, AlertTriangle,
   Clock, Heart, Stethoscope, Shield, Activity, ArrowRight,
   TrendingUp, MapPin, Phone, RefreshCw, CheckCircle2,
-  Camera, ScanFace, XCircle
+  Camera, ScanFace, XCircle, FileText, Upload, Download, Settings, History
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -347,6 +347,30 @@ function TriageCard({ triage }) {
   )
 }
 
+function AgentTraceTimeline({ steps = [] }) {
+  if (!steps.length) return null
+
+  return (
+    <div className="mt-4 rounded-2xl border border-slate-700 bg-[#0a1322] p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="h-4 w-4 text-cyan-400" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400">Agent Execution</span>
+      </div>
+      <div className="space-y-2">
+        {steps.map((step, index) => (
+          <div key={`${step.agent}-${index}`} className="flex items-start gap-3 text-[11px]">
+            <div className={`mt-0.5 h-2.5 w-2.5 rounded-full ${index === steps.length - 1 ? 'bg-emerald-400' : 'bg-cyan-500'}`} />
+            <div>
+              <p className="font-black text-slate-100 uppercase tracking-wider">{step.agent}</p>
+              <p className="text-slate-400">{step.note}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Quick Symptom Chips ──────────────────────────────────────────────────
 
 const QUICK_SYMPTOMS = [
@@ -371,6 +395,12 @@ function ChatPage() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [agentStatus, setAgentStatus] = useState(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [uploadMessage, setUploadMessage] = useState('')
+  const [reportPreview, setReportPreview] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
   const messagesEndRef = useRef(null)
 
   // Build history for backend context (user + assistant turns only)
@@ -383,6 +413,12 @@ function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    chatService.getAgentStatus()
+      .then(setAgentStatus)
+      .catch(() => setAgentStatus(null))
+  }, [])
 
   const handleSend = async (text = input) => {
     const trimmed = text.trim()
@@ -438,6 +474,37 @@ function ChatPage() {
       timestamp: new Date(),
     }])
   }
+
+  const handleDocumentUpload = async () => {
+    if (!selectedFile || uploading) return
+    setUploading(true)
+    setUploadMessage('')
+    try {
+      const result = await chatService.uploadDocument(selectedFile)
+      setUploadMessage(`Indexed ${result.document?.chunks_indexed || 0} chunks from ${selectedFile.name}`)
+      setSelectedFile(null)
+    } catch (error) {
+      setUploadMessage(error?.response?.data?.error || 'Document upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleGenerateReport = async () => {
+    if (reportLoading) return
+    setReportLoading(true)
+    try {
+      const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || ''
+      const result = await chatService.generateReport(latestUserMessage)
+      setReportPreview(result)
+    } catch (error) {
+      setReportPreview({ error: error?.response?.data?.error || 'Report generation failed.' })
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  const latestTrace = [...messages].reverse().find((message) => message.triage?.agent_trace)?.triage?.agent_trace || []
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[820px]">
@@ -513,6 +580,7 @@ function ChatPage() {
                     }`}>
                     {msg.content}
                     {msg.triage && <TriageCard triage={msg.triage} />}
+                      {msg.triage?.agent_trace && <AgentTraceTimeline steps={msg.triage.agent_trace} />}
                   </div>
                   <p className="text-[9px] text-slate-600 mt-1 font-bold uppercase tracking-wider ml-1">
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -585,6 +653,129 @@ function ChatPage() {
             </div>
           ))}
         </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="bg-[#111827] border border-cyan-900/40 p-5 rounded-2xl shadow-xl xl:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-cyan-950/30 rounded-lg"><Activity className="h-4 w-4 text-cyan-400" /></div>
+              <h3 className="text-white font-bold">Agent Status Panel</h3>
+            </div>
+            <div className="space-y-3">
+              {(agentStatus?.agents || []).map((agent) => (
+                <div key={agent.name} className="flex items-start justify-between gap-3 p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                  <div>
+                    <p className="text-sm font-bold text-white">{agent.name}</p>
+                    <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">{agent.role}</p>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Ready</span>
+                </div>
+              ))}
+              {!agentStatus && <p className="text-[11px] text-slate-500">Loading agent status...</p>}
+            </div>
+          </div>
+
+          <div className="bg-[#111827] border border-slate-700/50 p-5 rounded-2xl shadow-xl xl:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-blue-900/30 rounded-lg"><History className="h-4 w-4 text-blue-400" /></div>
+              <h3 className="text-white font-bold">Conversation History</h3>
+            </div>
+            <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+              {messages.filter((msg) => msg.role === 'user' || msg.role === 'assistant').slice(-4).map((msg) => (
+                <div key={msg.id} className="p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{msg.role}</p>
+                  <p className="text-sm text-slate-200 line-clamp-3">{msg.content}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#111827] border border-slate-700/50 p-5 rounded-2xl shadow-xl xl:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-emerald-900/30 rounded-lg"><Settings className="h-4 w-4 text-emerald-400" /></div>
+              <h3 className="text-white font-bold">Settings</h3>
+            </div>
+            <div className="space-y-3 text-sm text-slate-300">
+              <div className="flex items-center justify-between p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                <span>Document memory</span>
+                <span className="text-emerald-400 font-black">Enabled</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                <span>Planner routing</span>
+                <span className="text-cyan-400 font-black">Auto</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                <span>Cached docs</span>
+                <span className="text-slate-100 font-black">{agentStatus?.memory?.documents_indexed ? 'Yes' : 'No'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="bg-[#111827] border border-slate-700/50 p-5 rounded-2xl shadow-xl">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-cyan-900/30 rounded-lg"><Upload className="h-4 w-4 text-cyan-400" /></div>
+              <h3 className="text-white font-bold">Uploaded Documents</h3>
+            </div>
+            <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-4 file:py-2 file:text-white file:font-bold hover:file:bg-cyan-500"
+              />
+              <button
+                onClick={handleDocumentUpload}
+                disabled={!selectedFile || uploading}
+                className="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Upload PDF
+              </button>
+            </div>
+            {uploadMessage && <p className="mt-3 text-xs text-slate-300">{uploadMessage}</p>}
+          </div>
+
+          <div className="bg-[#111827] border border-slate-700/50 p-5 rounded-2xl shadow-xl">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-emerald-900/30 rounded-lg"><FileText className="h-4 w-4 text-emerald-400" /></div>
+              <h3 className="text-white font-bold">Patient Reports</h3>
+            </div>
+            <button
+              onClick={handleGenerateReport}
+              disabled={reportLoading}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+            >
+              {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Generate Report PDF
+            </button>
+            {reportPreview && !reportPreview.error && (
+              <div className="mt-4 space-y-2 text-xs text-slate-300">
+                <p><span className="text-white font-bold">Priority:</span> {reportPreview.report?.triage_priority}</p>
+                <p><span className="text-white font-bold">Specialist:</span> {reportPreview.report?.suggested_specialist}</p>
+                <p><span className="text-white font-bold">PDF:</span> {reportPreview.pdf_path?.split('\\').pop() || reportPreview.pdf_path?.split('/').pop()}</p>
+              </div>
+            )}
+            {reportPreview?.error && <p className="mt-3 text-xs text-red-400">{reportPreview.error}</p>}
+          </div>
+        </div>
+
+        {latestTrace.length > 0 && (
+          <div className="bg-[#111827] border border-slate-700/50 p-5 rounded-2xl shadow-xl">
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2 bg-cyan-900/30 rounded-lg"><Activity className="h-4 w-4 text-cyan-400" /></div>
+              <h3 className="text-white font-bold">Latest Agent Execution</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+              {latestTrace.map((step, index) => (
+                <div key={`${step.agent}-${index}`} className="p-3 bg-[#0a192f] rounded-xl border border-slate-700">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-cyan-400 mb-1">{step.agent}</p>
+                  <p className="text-xs text-slate-300 leading-relaxed">{step.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Daily Brief + Hospital Capacity */}
         <div className="grid grid-cols-2 gap-4">
